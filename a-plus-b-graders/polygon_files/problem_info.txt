@@ -1,0 +1,6 @@
+Problem ID: 208585
+Name: Unknown
+Time limit: 1000 ms
+Memory limit: 256 MB
+Input file: stdin
+Output file: stdout

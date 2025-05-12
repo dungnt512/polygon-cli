@@ -1,0 +1,6 @@
+Problem Information:
+ID: 437208
+Name: rmi-2024-day2-ramen
+Owner: hoangntbk56
+Downloaded on: 2025-05-13 00:37:39
+Files count: 75

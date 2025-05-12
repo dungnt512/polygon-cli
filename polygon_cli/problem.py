@@ -52,6 +52,8 @@ class ProblemSession:
         self.problem_id = problem_id
         self.owner = None
         self.problem_name = None
+        self.problem_code = None
+        self.problem_pin = None
         self.session = requests.session()
         self.sessionId = None
         self.ccid = None
@@ -85,6 +87,10 @@ class ProblemSession:
         else:
             self.owner = data["owner"]
             self.problem_name = data["problemName"]
+            if "problem_code" in data:
+                self.problem_code = data["problem_code"]
+            if "problem_pin" in data:
+                self.problem_pin = data["problem_pin"]
             if data["version"] < 2:
                 for i in range(len(self.local_files)):
                     if self.local_files[i].type == "statement":
@@ -111,11 +117,15 @@ class ProblemSession:
         data["owner"] = self.owner
         data["polygon_name"] = self.polygon_name
         data["version"] = 3
+        if self.problem_code is not None:
+            data["problem_code"] = self.problem_code
+        if self.problem_pin is not None:
+            data["problem_pin"] = self.problem_pin
         if self.pin is not None:
             data["pin"] = self.pin
         return data
 
-    def make_link(self, link, ccid=False, ssid=False):
+    def make_link(self, link, ccid=False, ssid=False, debug=False):
         """
 
         :type link: str
@@ -139,10 +149,14 @@ class ProblemSession:
             if self.sessionId is None:
                 self.renew_http_data()
             link += 'session=%s' % self.sessionId
+        if debug:
+            print("[DEBUG] Generated link: %s" % link)
         if link.startswith('/'):
             result = config.polygon_url + link
         else:
             result = config.polygon_url + '/' + link
+        if debug:
+            print("[DEBUG] Final result: %s" % result)
         return result
 
     def send_request(self, method, url, **kw):
@@ -208,7 +222,7 @@ class ProblemSession:
                 return open(i.get_path(), 'rb').read()
         return None
 
-    def login(self, login, password):
+    def login(self, login, password, debug=False):
         """
 
         :type login: str
@@ -222,23 +236,44 @@ class ProblemSession:
             "submit": "Login",
         }
 
-        url = self.make_link("login")
+        url = self.make_link("login", debug=debug)
         result = self.send_request('POST', url, data=fields)
         parser = ExtractCCIDParser()
         parser.feed(result.text)
+        if debug:
+            print("[DEBUG] CCID: %s" % parser.ccid)
+            print("[DEBUG] Session ID: %s" % parser.session)
+            print("[DEBUG] Result: %s" % result.text)
+            print("[DEBUG] URL: %s" % url)
+            print("[DEBUG] Fields: %s" % fields)
+            print("[DEBUG] Result status: %s" % result.status_code)
+            print("[DEBUG] Result text: %s" % result.text)
+            print("[DEBUG] Result headers: %s" % result.headers)
+            print("[DEBUG] Result content: %s" % result.content)
+            print("[DEBUG] Result cookies: %s" % result.cookies)
+            print("[DEBUG] Result url: %s" % result.url)
+            print("[DEBUG] Result history: %s" % result.history)
+            print("[DEBUG] Result status_code: %s" % result.status_code)
+            print("[DEBUG] Result text: %s" % result.text)
+            print("[DEBUG] Result headers: %s" % result.headers)
+            print("[DEBUG] Result content: %s" % result.content)
+            
         assert parser.ccid
         self.ccid = parser.ccid
 
-    def get_problem_links(self):
+    def get_problem_links(self, debug=False):
         """
 
         :rtype: dict
         """
         currentpage = 1
         while True:
-            url = self.make_link('problems?page=%d' % currentpage, ccid=True)
-            problems_page = self.send_request('GET', url).text
+            url = self.make_link('problems?page=%d' % currentpage, ccid=True, debug=debug)
+            problems_page = self.send_request('GET', url, debug=debug).text
             parser = ProblemsPageParser(self.problem_id)
+            if debug:
+                print("[DEBUG] Problems page: %s" % problems_page)
+
             parser.feed(problems_page)
             if parser.continueLink or parser.startLink:
                 return {'continue': parser.continueLink,
@@ -257,15 +292,15 @@ class ProblemSession:
                 'problem_name': None
                 }
 
-    def renew_http_data(self):
+    def renew_http_data(self, debug=False):
         self.relogin_done = True
         get_login_password()
-        self.login(config.login, config.password)
-        links = self.get_problem_links()
+        self.login(config.login, config.password, debug=debug)
+        links = self.get_problem_links(debug=debug)
         if links['start'] is None and links['continue'] is None:
             raise ProblemNotFoundError()
-        url = self.make_link(links['continue'] or links['start'])
-        problem_page = self.send_request('GET', url).text
+        url = self.make_link(links['continue'] or links['start'], debug=debug)
+        problem_page = self.send_request('GET', url, debug=debug).text
         parser = ExtractSessionParser()
         parser.feed(problem_page)
         self.sessionId = parser.session
@@ -561,26 +596,132 @@ class ProblemSession:
             result[problems[i]["name"]] = problems[i]["id"]
         return result
 
-    def download_last_package(self):
-        url = self.make_link('package', ssid=True, ccid=True)
-        data = self.send_request('GET', url).text
+    def download_last_package(self, file_path=None, format_type='windows', debug=False):
+        """
+        Download the last package with detailed logging
+        """
+        if debug:
+            print("\n[DEBUG] === START PACKAGE DOWNLOAD PROCESS ===")
+            print("[DEBUG] Parameters: file_path=%s, format_type=%s" % (file_path, format_type))
+        
+        # Step 1: Generate URL to package page
+        url = self.make_link('package', ssid=True, ccid=True, debug=debug)
+        if debug:
+            print("[DEBUG] Generated package page URL: %s" % url)
+        
+        # Step 2: Request the package page
+        if debug:
+            print("[DEBUG] Sending GET request to package page...")
+        
+        try:
+            response = self.send_request('GET', url)
+            if debug:
+                print("[DEBUG] Response status: %d" % response.status_code)
+                print("[DEBUG] Response headers: %s" % response.headers)
+        except Exception as e:
+            if debug:
+                print("[DEBUG] Exception during page request: %s" % str(e))
+            raise
+        
+        # Step 3: Parse HTML to find package link
+        if debug:
+            print("[DEBUG] Parsing HTML response...")
+        
+        data = response.text
         parser = PackageParser()
-        parser.feed(data)
-        print(parser.url)
+        
+        try:
+            parser.feed(data)
+            if debug:
+                print("[DEBUG] Parser found URL: %s" % parser.url)
+        except Exception as e:
+            if debug:
+                print("[DEBUG] Exception during HTML parsing: %s" % str(e))
+            raise
+        
+        # Check if package exists
         if parser.url is None:
-            print('No package created')
+            if debug:
+                print("[DEBUG] No package URL found in HTML")
+            print('No package found')
             return
-        link = self.make_link(parser.url, ssid=True, ccid=False)
-        filename = parser.url
-        filename = filename[:filename.find('.zip')]
-        filename = filename[filename.rfind('/') + 1:]
-        filename = filename[:filename.rfind('-')]
-        f = open('%s.zip' % (filename), 'wb')
-        r = self.send_request('GET', link)
-        for c in r.iter_content(1024):
-            if (c):
-                f.write(c)
-        f.close()
+        
+        # Step 4: Modify URL for requested format
+        package_url = parser.url
+        original_url = package_url
+        
+        if format_type == 'linux' or format_type == 'unix':
+            package_url = package_url.replace('windows.zip', 'linux.zip')
+        elif format_type == 'mac':
+            package_url = package_url.replace('windows.zip', 'mac.zip')
+        
+        if debug:
+            print("[DEBUG] Original package URL: %s" % original_url)
+            print("[DEBUG] Modified package URL: %s" % package_url)
+        
+        # Step 5: Generate download link with session parameters
+        link = self.make_link(package_url, ssid=True, ccid=False, debug=debug)
+        if debug:
+            print("[DEBUG] Final download link: %s" % link)
+        
+        # Step 6: Generate output filename if not specified
+        if file_path is None:
+            filename = package_url
+            filename = filename[:filename.find('.zip')]
+            filename = filename[filename.rfind('/') + 1:]
+            filename = filename[:filename.rfind('-')]
+            file_path = f'{filename}.zip'
+            
+            if debug:
+                print("[DEBUG] Generated filename: %s" % file_path)
+        
+        print(f'Downloading {format_type} package to {file_path}...')
+        
+        # Step 7: Download the file
+        try:
+            if debug:
+                print("[DEBUG] Sending download request...")
+            
+            r = self.send_request('GET', link, stream=True)
+            
+            if debug:
+                print("[DEBUG] Download response status: %d" % r.status_code)
+                print("[DEBUG] Content-Length: %s" % r.headers.get('Content-Length', 'unknown'))
+                print("[DEBUG] Content-Type: %s" % r.headers.get('Content-Type', 'unknown'))
+        except Exception as e:
+            if debug:
+                print("[DEBUG] Exception during download request: %s" % str(e))
+            raise
+        
+        # Step 8: Save the file
+        try:
+            if debug:
+                print("[DEBUG] Opening output file for writing: %s" % file_path)
+            
+            f = open(file_path, 'wb')
+            bytes_written = 0
+            
+            for c in r.iter_content(1024):
+                if c:
+                    f.write(c)
+                    bytes_written += len(c)
+                    
+                    if debug and bytes_written % 102400 == 0:  # Log every 100KB
+                        print("[DEBUG] Written %d bytes..." % bytes_written)
+            
+            f.close()
+            
+            if debug:
+                print("[DEBUG] File written successfully, total bytes: %d" % bytes_written)
+        except Exception as e:
+            if debug:
+                print("[DEBUG] Exception during file writing: %s" % str(e))
+            raise
+        
+        print(f'Package successfully downloaded to {file_path}')
+        
+        if debug:
+            print("[DEBUG] === FINISH PACKAGE DOWNLOAD PROCESS ===\n")
 
     def read_tutorial(self, problem_node, directory, language):
         if problem_node.find('tutorials') is None:
@@ -959,3 +1100,44 @@ class ProblemSession:
             'pointsPolicy': 'COMPLETE_GROUP',
             'dependencies': ','.join(map(str, depends))
         })
+
+    def download_package_old_method(self, url, format_type='windows', file_path=None):
+        """Fallback method to download package using HTML parsing method"""
+        print("Using legacy method to download package...")
+        data = self.send_request('GET', url).text
+        parser = PackageParser()
+        parser.feed(data)
+        
+        if parser.url is None:
+            print('No package found')
+            return
+        
+        # Process package format based on format_type
+        package_url = parser.url
+        if format_type == 'linux' or format_type == 'unix':
+            package_url = package_url.replace('windows.zip', 'linux.zip')
+        elif format_type == 'mac':
+            package_url = package_url.replace('windows.zip', 'mac.zip')
+        
+        link = self.make_link(package_url, ssid=True, ccid=False)
+        
+        # Determine output filename
+        if file_path is None:
+            filename = package_url
+            filename = filename[:filename.find('.zip')]
+            filename = filename[filename.rfind('/') + 1:]
+            filename = filename[:filename.rfind('-')]
+            file_path = f'{filename}.zip'
+        
+        print(f'Downloading {format_type} package to {file_path} (legacy method)...')
+        
+        # Download and write file
+        f = open(file_path, 'wb')
+        r = self.send_request('GET', link)
+        for c in r.iter_content(1024):
+            if c:
+                f.write(c)
+        f.close()
+        
+        print(f'Package successfully downloaded to {file_path}')
+        return True

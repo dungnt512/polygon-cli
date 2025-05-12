@@ -16,50 +16,62 @@ from .actions import update_groups as update_groups_action
 from .actions import update_info as update_info_action
 from .actions import tag_solution as tag_solution_action
 from .actions import tag_problem as tag_problem_action
-from .exceptions import PolygonNotLoginnedError
+from .actions import checker as checker_action
+from .actions import list_problemset as list_problemset_action
+from .actions import download_files as download_files_action
 
-parser = argparse.ArgumentParser(prog="polygon-cli")
-parser.add_argument('-v', '--verbose',
-                    action='store_true',
-                    dest='verbose',
-                    default=True,
-                    help='Verbose output')
-parser.add_argument('-V', '--no-verbose',
-                    action='store_false',
-                    dest='verbose',
-                    help='Reduce output verbosity')
-subparsers = parser.add_subparsers(
-        title='available subcommands',
-        description='',
-        help='DESCRIPTION',
-        metavar="SUBCOMMAND",
-)
+from . import config
+from . import utils
 
-subparsers.required = True
 
-init_action.add_parser(subparsers)
-update_action.add_parser(subparsers)
-add_action.add_parser(subparsers)
-commit_action.add_parser(subparsers)
-list_action.add_parser(subparsers)
-diff_action.add_parser(subparsers)
-get_test_action.add_parser(subparsers)
-download_package_action.add_parser(subparsers)
-samples_action.add_parser(subparsers)
-import_package_action.add_parser(subparsers)
-update_groups_action.add_parser(subparsers)
-update_info_action.add_parser(subparsers)
-tag_solution_action.add_parser(subparsers)
-tag_problem_action.add_parser(subparsers)
+def make_actions(subparsers):
+    add_action.add_parser(subparsers)
+    commit_action.add_parser(subparsers)
+    diff_action.add_parser(subparsers)
+    get_test_action.add_parser(subparsers)
+    init_action.add_parser(subparsers)
+    list_action.add_parser(subparsers)
+    update_action.add_parser(subparsers)
+    download_package_action.add_parser(subparsers)
+    samples_action.add_parser(subparsers)
+    import_package_action.add_parser(subparsers)
+    update_groups_action.add_parser(subparsers)
+    update_info_action.add_parser(subparsers)
+    checker_action.add_parser(subparsers)
+    tag_solution_action.add_parser(subparsers)
+    tag_problem_action.add_parser(subparsers)
+    list_problemset_action.add_parser(subparsers)
+    download_files_action.add_parser(subparsers)
+    return subparsers
 
 
 def main():
-    try:
-        options = parser.parse_args(argv[1:])
-        options.func(options)
-    except PolygonNotLoginnedError:
-        print('Can not login to polygon.')
+    parser = argparse.ArgumentParser(prog="polygon-cli")
+    subparsers = parser.add_subparsers(
+            title='Available subcommands',
+            metavar='subcommand',
+    )
+    subparsers.required = True
+    subparsers.dest = 'subcommand'
+    
+    make_actions(subparsers)
 
+    parser.add_argument('--verbose', action='store_true', help='Verbose mode')
+    parser.add_argument('--polygon-name',
+                      action='store',
+                      dest='polygon_name',
+                      help='Name of polygon server to use for this problem',
+                      default='main')
+
+    # Xử lý help message
+    for arg in argv:
+        if arg in ["-h", "--help"]:
+            if hasattr(utils, 'help_message'):
+                utils.help_message()
+    
+    args = parser.parse_args()
+    config.setup_login_by_url(args.polygon_name)
+    args.func(args)
 
 if __name__ == "__main__":
     main()

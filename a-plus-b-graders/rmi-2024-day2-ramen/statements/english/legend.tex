@@ -1,0 +1,37 @@
+Có $N$ sinh viên $S_0, S_1, \ldots, S_{N - 1}$ và $N$ môn học tự chọn $M_0, M_1, \ldots, M_{N - 1}$. Mỗi sinh viên $S_i$ có một mức độ yêu thích $A_{ij}$ đối với từng môn học $M_j$. Mức độ yêu thích càng cao thì sinh viên càng muốn học môn đó. Với mỗi sinh viên, các mức độ yêu thích với các môn học là phân biệt --- tức là không có hai môn học nào được đánh giá bằng nhau.
+
+Do điều kiện tổ chức, trong một đợt đăng ký, mỗi môn học chỉ có một suất duy nhất và mỗi sinh viên chỉ được học đúng một môn.
+
+Giả sử sinh viên đăng ký môn học theo một thứ tự cho trước $\pi = (\pi_0, \pi_1, \dots, \pi_{N-1})$, tức là sinh viên $S_{\pi_0}$ đăng ký trước, tiếp đến $S_{\pi_1}$, v.v. Mỗi sinh viên, khi đến lượt mình, sẽ chọn môn học mà mình yêu thích nhất trong số các môn còn lại (chưa có ai đăng ký).
+
+Sau khi tất cả sinh viên đã đăng ký, ta xác định được mỗi sinh viên $S_i$ được gán một môn học $M_{\sigma(i)}$, và tổng mức độ hài lòng của cả nhóm là:
+
+\begin{center}
+$$
+\sum_{i = 0}^{N - 1} A_{i, \sigma(i)}
+$$
+\end{center}
+
+\textbf{Mục tiêu:} Hãy tìm thứ tự đăng ký $\pi$ sao cho tổng mức độ hài lòng là lớn nhất.
+
+\Interaction
+Bạn cần viết hàm sau:
+\begin{center}
+\begin{lstlisting}
+vector<int> solve(int N);
+\end{lstlisting}
+\end{center}
+
+Trong đó $N$ là số sinh viên (cũng là số môn học). Hàm trả về một hoán vị $\pi$ của các chỉ số từ $0$ đến $N - 1$, đại diện cho thứ tự các sinh viên đăng ký môn học.
+
+Bạn được phép gọi tối đa 750 lần hàm:
+\begin{center}
+\begin{lstlisting}
+vector<pair<int, int>> ask(const vector<int>& order);
+\end{lstlisting}
+\end{center}
+Trong đó:
+\begin{itemize}
+    \item Tham số \texttt{order} là thứ tự đăng ký các sinh viên.
+    \item Kết quả trả về là một danh sách gồm $N$ cặp $(\sigma(i), A_{i, \sigma(i)})$, trong đó $\sigma(i)$ là môn học mà sinh viên $S_i$ nhận được, và $A_{i, \sigma(i)}$ là mức độ yêu thích tương ứng.
+\end{itemize}

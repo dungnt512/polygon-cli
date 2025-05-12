@@ -15,6 +15,12 @@ Command-line tool for [polygon](https://polygon.codeforces.com/)
 * Download files and solutions from polygon.
 * Uploading them back to polygon.
 * Automatic merging with conflicts.
+* Download checkers from polygon.
+* List all available problemsets (sorted by ID, newest first).
+* Enhanced package downloading with format options and PIN support.
+* Initialize by problem name instead of just ID.
+* Automatically extract PIN code from problem URL.
+* Download all problem files with package-like directory structure.
 
 ## Installation
 
@@ -30,28 +36,122 @@ Run `pip3 install polygon-cli`
 3. Run `python3 setup.py install [--user]`
 
       * On Linux, it will put the executable polygon-cli in /usr/local/bin
-      * On Windows, it will put the executable polygon-cli in Scripts directory of your Python3 installation. It should be added to the path variable for easier usage.
+      * On Windows, it will create a polygon-cli.exe in Python/Scripts folder
 
-   Add the option `--user` to install as local user without root/administrator privileges.
+## First launch
 
-4. Even if it doesn't run, install the dependencies manually as below,
-  * `pip3 install requests`
-  * `pip3 install colorama`
-  * `pip3 install prettytable`
-  * `pip3 install pyyaml`
+Type `polygon-cli init <problem-id>` or `polygon-cli init <problem-name>` to start working with problem
 
-## Running and authentication
+The CLI will ask you for:
+1. Polygon URL (default: https://polygon.codeforces.com)
+2. Login credentials
+3. API key and secret
 
-Run using `polygon-cli` command.
+## Basic usage
 
-Usually the usage starts with (use problem short name or problem id instead of `aplusb`):
-   * `polygon-cli init aplusb`
-   * `polygon-cli update`
+### Using the API key
 
-The commands above create a working copy in the current folder. Use `polygon-cli -h` to see other commands of the client.
+1. Go to the settings page (click your login in the upper right corner of the Polygon site and select "settings")
+2. Go to the third tab, it is about the API keys
+3. If you had no key, add a key, add a description to it if you want and click "Create" button. Copy the key and the secret
+4. If you already have a key, you can use it, just click "Show key and secret" (you can have several keys)
 
-On the first usage login, password, api_key and api_secret will be asked.
+### Commands
 
-They will be stored locally in plain text.
+To get the list of available commands, type `polygon-cli --help` or just `polygon-cli`
 
-You may leave password field empty. If you do that, some features based on html parsing, because of lack of api will not work then.
+Current commands are:
+
+* login - Log in to polygon.
+* init - Initialize tool for problem.
+* init_contest - Initialize tool for several problems in contest.
+* update - Download files from polygon working copy, and merge with local copy if needed.
+* add - Upload files to polygon working copy.
+* commit - Put all polygon working copy to polygon main revision.
+* diff - Display diff of local and polygon version of file.
+* list - List files in polygon.
+* download_package - Download package from polygon.
+* download_checker - Download checker from polygon.
+* download_all_tests - Download all tests from polygon.
+* list_problemset - List all available problem sets.
+* download_files - Download all problem files with package-like structure.
+
+### Package Download Example
+
+```bash
+# Download Windows package
+polygon-cli download_package
+
+# Download Linux package with custom filename
+polygon-cli download_package --format linux -o my_problem.zip
+
+# Download package with PIN
+polygon-cli download_package --pin p85dIBF 
+```
+
+### Working with problem by name
+
+When initializing a problem, you can use its name instead of ID:
+
+```bash
+polygon-cli init a-plus-b
+```
+
+The system will automatically find the problem ID and save it along with the problem owner and PIN code.
+
+### Download All Problem Files
+
+The `download_files` command downloads all files from a problem and organizes them in a directory structure similar to the package format:
+
+```bash
+# Basic usage - downloads to directory named after problem
+polygon-cli download_files
+
+# Download to a specific directory
+polygon-cli download_files --output my_problem_files
+
+# Create a ZIP archive in addition to the directory
+polygon-cli download_files --create-zip
+
+# Overwrite existing directory
+polygon-cli download_files --force
+
+# Download silently (no progress messages)
+polygon-cli download_files --quiet
+```
+
+This creates a directory structure like:
+```
+my_problem_files/
+├── src/           # Source files (including checker, validator, etc.)
+├── tests/         # Test files
+├── solutions/     # Solutions
+├── statements/    # Problem statements
+└── problem_info.txt
+```
+
+## New Features
+
+### Download Checker
+Download the problem's checker with:
+```
+polygon-cli download_checker [--target PATH]
+```
+
+### List All Problemsets
+List all available problemsets:
+```
+polygon-cli list_problemset
+```
+
+### Enhanced Package Download
+Download package with more options:
+```
+polygon-cli download_package [--format {windows,linux,mac}] [--output FILE_PATH] [--pin PIN_CODE]
+```
+
+### Download All Files with Package Structure
+Download all problem files with a package-like structure:
+```
+polygon-cli download_files [--output DIR_PATH] [--create-zip] [--force] [--quiet]
+```

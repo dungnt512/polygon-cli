@@ -201,3 +201,21 @@ def get_api_file_type(type):
     if type == 'attachment':
         return 'aux'
     return None
+
+
+def help_message():
+    print("For help use polygon-cli --help")
+
+
+def add_auth_arguments_to_parser(parser):
+    """
+    Dummy function to maintain backward compatibility
+    """
+    pass
+
+
+def process_auth_arguments(args):
+    """
+    Dummy function to maintain backward compatibility
+    """
+    pass
